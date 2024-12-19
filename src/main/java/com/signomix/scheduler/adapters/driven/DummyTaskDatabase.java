@@ -1,6 +1,7 @@
 package com.signomix.scheduler.adapters.driven;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
@@ -12,15 +13,25 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     // - system tasks (see: signomix-ta-jobs)
     // - user tasks (user defined)
 
-    private ArrayList<TaskDefinition> tasks;
+    private HashMap<Long,TaskDefinition> tasks;
 
     public DummyTaskDatabase() {
+                
+    }
+
+    @Override
+    public List<TaskDefinition> getTasks() {
+        return tasks.values().stream().toList();
+    }
+
+    @Override
+    public void createDatabase() {
+        tasks= new HashMap<>();
         // Quarkus cron format: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html
-        
-        tasks= new ArrayList<>();
 
         // Report task - dummy
         TaskDefinition task = new TaskDefinition();
+        task.id=1L;
         task.type = TaskDefinition.REPORT;
         task.jobName = "job1";
         task.jobGroup = "reports";
@@ -29,10 +40,11 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
         task.triggerName = "trigger1";
         task.triggerGroup = "reports";
         task.jobDataMap.put("dql", "report DummyReport");
-        tasks.add(task);
+        addTask(task);
 
         // Event task - dummy
         task = new TaskDefinition();
+        task.id=2L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "job2";
         task.jobGroup = "events";
@@ -42,13 +54,31 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "system-monitor");
-        tasks.add(task);
-
+        addTask(task);
     }
 
     @Override
-    public List<TaskDefinition> getTasks() {
-        return tasks;
+    public long addTask(TaskDefinition task) {
+        if(task.id==null){
+            task.id=System.currentTimeMillis();
+        }
+        tasks.put(task.id, task);
+        return task.id;
+    }
+
+    @Override
+    public TaskDefinition getTask(long taskId) {
+        return tasks.get(taskId);
+    }
+
+    @Override
+    public void updateTask(TaskDefinition task) {
+        tasks.put(task.id, task);
+    }
+
+    @Override
+    public void deleteTask(long taskId) {
+        tasks.remove(taskId);
     }
     
 }

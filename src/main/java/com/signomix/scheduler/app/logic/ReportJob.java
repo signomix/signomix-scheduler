@@ -13,9 +13,11 @@ public class ReportJob extends Job implements  org.quartz.Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        Long id = (Long) context.getMergedJobDataMap().get("id");
+        checkAndReschedule(id);
         String dql = (String) context.getMergedJobDataMap().get("dql");
         if(dql == null || dql.isEmpty()){
-            logger.error("No DQL query defined for report job");
+            logger.error("No DQL query defined for report job "+id);
             return;
         }
         String email = (String) context.getMergedJobDataMap().get("email");
@@ -23,7 +25,7 @@ public class ReportJob extends Job implements  org.quartz.Job {
             logger.error("No target email defined for report job");
             return;
         }
-        logger.info("Executing report job with DQL query: " + dql);
+        logger.info("Executing report job "+id+" with DQL query: " + dql);
         logger.info("Not implemented yet");
         //TODO: call the report service
         

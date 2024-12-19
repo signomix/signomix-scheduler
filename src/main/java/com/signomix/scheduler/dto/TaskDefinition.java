@@ -10,7 +10,9 @@ public class TaskDefinition {
     public final static int EMAIL = 4; // Send an email
     public final static int SMS = 5; // Send an SMS
 
+    public Long id;
     public int type;
+    public boolean enabled = true;
     public String triggerName;
     public String triggerGroup;
     public String nlScheduleDefinition; // Schedule definition in natural language
@@ -18,4 +20,5 @@ public class TaskDefinition {
     public String jobName;
     public String jobGroup;
     public Map<String, Object> jobDataMap = new java.util.HashMap<>();
+
 }
