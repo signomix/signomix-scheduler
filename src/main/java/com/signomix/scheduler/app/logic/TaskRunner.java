@@ -34,6 +34,7 @@ public class TaskRunner {
         jobDatabase.createDatabase();
         createSystemTasks();
         jobDatabase.getTasks().forEach(task -> {
+            logger.info("Task: " + task.jobName + " with schedule: " + task.scheduleDefinition);
             scheduleTask(task);
         });
     }
@@ -85,6 +86,7 @@ public class TaskRunner {
         TaskDefinition task;
         
         task = new TaskDefinition();
+        task.id = 1L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "system-monitor";
         task.jobGroup = "events";
@@ -97,6 +99,7 @@ public class TaskRunner {
         jobDatabase.addTask(task);
 
         task = new TaskDefinition();
+        task.id = 2L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "backup";
         task.jobGroup = "events";
@@ -109,6 +112,7 @@ public class TaskRunner {
         jobDatabase.addTask(task);
 
         task = new TaskDefinition();
+        task.id = 3L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "archive";
         task.jobGroup = "events";
@@ -121,6 +125,7 @@ public class TaskRunner {
         jobDatabase.addTask(task);
 
         task= new TaskDefinition();
+        task.id = 4L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "datacleaner";
         task.jobGroup = "events";
@@ -133,6 +138,7 @@ public class TaskRunner {
         jobDatabase.addTask(task);
 
         task = new TaskDefinition();
+        task.id = 5L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "devicechecker";
         task.jobGroup = "events";
@@ -145,6 +151,7 @@ public class TaskRunner {
         jobDatabase.addTask(task);
 
         task = new TaskDefinition();
+        task.id = 6L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "commandrunner";
         task.jobGroup = "events";

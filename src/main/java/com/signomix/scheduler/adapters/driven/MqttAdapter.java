@@ -13,8 +13,5 @@ public class MqttAdapter {
 
     @Channel("devicecommands")
     Emitter<byte[]> deviceCommandEmitter;
-
-    @Channel("events")
-    Emitter<byte[]> eventEmitter;
     
 }

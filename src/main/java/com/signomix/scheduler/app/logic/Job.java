@@ -15,10 +15,6 @@ public class Job {
     @Channel("devicecommands")
     Emitter<String> deviceCommandsEmitter;
 
-    @Inject
-    @Channel("events")
-    Emitter<String> eventsEmitter;
-
     @Channel("adminemail")
     Emitter<String> adminEmailEmitter;
     
@@ -42,9 +38,6 @@ public class Job {
                 break;
             case "devicecommands":
                 deviceCommandsEmitter.send(message);
-                break;
-            case "events":
-                eventsEmitter.send(message);
                 break;
             case "adminemail":
                 adminEmailEmitter.send(message);

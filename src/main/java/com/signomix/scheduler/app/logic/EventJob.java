@@ -26,7 +26,6 @@ public class EventJob extends Job implements  org.quartz.Job {
             return;
         }
         logger.info("Sending event : " + channel + " with message: " + message);
-        logger.info("Not implemented yet"); 
         publish(channel, message);
     }
 }
