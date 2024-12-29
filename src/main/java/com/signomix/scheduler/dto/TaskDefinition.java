@@ -19,6 +19,6 @@ public class TaskDefinition {
     public String scheduleDefinition;   // Schedule definition in cron format
     public String jobName;
     public String jobGroup;
-    public Map<String, Object> jobDataMap = new java.util.HashMap<>();
+    public Map<String, String> jobDataMap = new java.util.HashMap<>();
 
 }

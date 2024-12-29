@@ -59,6 +59,19 @@
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-rest-client-jackson</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-agroal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.signomix</groupId>
+      <artifactId>signomix-common</artifactId>
+      <version>1.19.0</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

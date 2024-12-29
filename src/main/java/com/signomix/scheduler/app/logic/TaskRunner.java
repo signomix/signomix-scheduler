@@ -1,5 +1,7 @@
 package com.signomix.scheduler.app.logic;
 
+import java.util.List;
+
 import org.jboss.logging.Logger;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
@@ -9,10 +11,13 @@ import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 
-import com.signomix.scheduler.adapters.driven.DummyTaskDatabase;
+import com.signomix.scheduler.adapters.driven.TaskDatabase;
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
+import com.signomix.scheduler.app.ports.driven.TaskDatabaseException;
 import com.signomix.scheduler.dto.TaskDefinition;
 
+import io.agroal.api.AgroalDataSource;
+import io.quarkus.agroal.DataSource;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
@@ -27,18 +32,24 @@ public class TaskRunner {
     @Inject
     org.quartz.Scheduler quartz;
 
-    ForAccessTasksDatabase jobDatabase = new DummyTaskDatabase();
+    @Inject
+    @DataSource("olap")
+    AgroalDataSource olapDs;
 
-    void onStart(@Observes StartupEvent event) throws SchedulerException {
+    ForAccessTasksDatabase jobDatabase = new TaskDatabase();
+
+    void onStart(@Observes StartupEvent event) throws SchedulerException, TaskDatabaseException {
         logger.info("The application is starting...");
+        jobDatabase.setDataSource(olapDs);
         jobDatabase.createDatabase();
         createSystemTasks();
-        jobDatabase.getTasks().forEach(task -> {
+        List<TaskDefinition> tasks = jobDatabase.getTasks();
+        logger.info("Tasks in database: " + tasks.size());
+        for (TaskDefinition task : tasks) {
             logger.info("Task: " + task.jobName + " with schedule: " + task.scheduleDefinition);
             scheduleTask(task);
-        });
+        }
     }
-
 
     public void scheduleTask(TaskDefinition definition) {
         if (!definition.enabled) {
@@ -81,10 +92,10 @@ public class TaskRunner {
         }
     }
 
-    private void createSystemTasks() {
+    private void createSystemTasks() throws TaskDatabaseException {
         // Event tasks
         TaskDefinition task;
-        
+
         task = new TaskDefinition();
         task.id = 1L;
         task.type = TaskDefinition.EVENT;
@@ -96,7 +107,14 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "system-monitor");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
 
         task = new TaskDefinition();
         task.id = 2L;
@@ -109,7 +127,14 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "backup");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
 
         task = new TaskDefinition();
         task.id = 3L;
@@ -122,9 +147,16 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "archive");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
 
-        task= new TaskDefinition();
+        task = new TaskDefinition();
         task.id = 4L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "datacleaner";
@@ -135,7 +167,14 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "datacleaner");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
 
         task = new TaskDefinition();
         task.id = 5L;
@@ -148,7 +187,14 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "devicechecker");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
 
         task = new TaskDefinition();
         task.id = 6L;
@@ -161,7 +207,38 @@ public class TaskRunner {
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "devicecommands");
-        jobDatabase.addTask(task);
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
+
+        // Report tasks
+        task = new TaskDefinition();
+        task.id = 7L;
+        task.enabled = false;
+        task.type = TaskDefinition.REPORT;
+        task.jobName = "daily-report";
+        task.jobGroup = "reports";
+        task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
+        task.nlScheduleDefinition = "Every 5 minutes";
+        task.triggerName = "daily-report-trigger";
+        task.triggerGroup = "reports";
+        task.jobDataMap.put("token", "sgx_d67e4afeade49409ef73b704cf3415eb");
+        task.jobDataMap.put("email", "g.skorupa@gmail.com");
+        task.jobDataMap.put("subject", "Daily report");
+        task.jobDataMap.put("dql", "report DqlReport eui IOTEMULATOR channel temperature,humidity last 10 format csv");
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
     }
 
 }

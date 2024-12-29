@@ -17,6 +17,9 @@ public class Job {
 
     @Channel("adminemail")
     Emitter<String> adminEmailEmitter;
+
+    @Channel("email")
+    Emitter<String> emailEmitter;
     
 
     
@@ -27,8 +30,14 @@ public class Job {
         // 3. if task definition is found and enabled, check modification date and reschedule if updated
     }
 
-    protected void sendEmail(String email, String subject, String message) {
+    protected void sendEmail(String email, String subject, String content) {
         //TODO: implement email sending
+        String message =
+        email + "\n" +
+        subject + "\n" +
+        content;
+
+        publish("email", message);
     }
 
     protected void publish(String topic, String message) {
@@ -41,6 +50,9 @@ public class Job {
                 break;
             case "adminemail":
                 adminEmailEmitter.send(message);
+                break;
+            case "email":
+                emailEmitter.send(message);
                 break;
             default:
                 break;

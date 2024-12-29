@@ -6,6 +6,8 @@ import java.util.List;
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.dto.TaskDefinition;
 
+import io.agroal.api.AgroalDataSource;
+
 public class DummyTaskDatabase implements ForAccessTasksDatabase {
 
     // There will be 2 groupsof tasks:
@@ -51,6 +53,10 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     @Override
     public void deleteTask(long taskId) {
         tasks.remove(taskId);
+    }
+
+    @Override
+    public void setDataSource(AgroalDataSource dataSource) {
     }
     
 }
