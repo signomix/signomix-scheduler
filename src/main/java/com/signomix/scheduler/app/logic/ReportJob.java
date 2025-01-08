@@ -42,14 +42,21 @@ public class ReportJob extends Job implements org.quartz.Job {
         if (subject == null || subject.isEmpty()) {
             subject = "Scheduled report job " + id;
         }
+        String attachment = (String) context.getMergedJobDataMap().get("attachment");
         logger.info("Executing report job " + id + " with DQL query: " + dql);
 
         // call the report service
-        Response response = reportClient.getSingleReport(token, dql);
+        // html header and footer not applicable for email
+        boolean withHeader = (
+            (attachment != null && attachment.endsWith(".html"))
+            || (email == null || email.isEmpty())
+            );
+        Response response = reportClient.getSingleReport(token, dql, withHeader);
         if (response.getStatus() != 200) {
             logger.error("Error calling the report service: " + response.getStatus());
             return;
         }
+
         String reportContent = response.readEntity(String.class);
         logger.info("Report content: " + reportContent);
         if (reportContent == null || reportContent.trim().isEmpty()) {
@@ -69,8 +76,11 @@ public class ReportJob extends Job implements org.quartz.Job {
             }
         }
 
+        if(email!=null && !email.isEmpty()){
+            // get HTML head and tail
+        }
         // send the report by email
-        sendEmail(email, subject, reportContent);
+        sendEmail(email, subject, reportContent, attachment);
     }
 
 }

@@ -14,6 +14,9 @@ public interface ReportClient {
 
     @GET
     @Path("/single")
-    Response getSingleReport(@HeaderParam("Authentication") String token, @QueryParam("query") String query);
+    Response getSingleReport(
+            @HeaderParam("Authentication") String token,
+            @QueryParam("query") String query,
+            @QueryParam("header") Boolean header);
 
 }

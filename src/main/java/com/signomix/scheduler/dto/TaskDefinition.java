@@ -12,6 +12,7 @@ public class TaskDefinition {
 
     public Long id;
     public int type;
+    public String userId;
     public boolean enabled = true;
     public String triggerName;
     public String triggerGroup;

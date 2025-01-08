@@ -26,6 +26,15 @@ public interface ForAccessTasksDatabase {
      * @return a list of {@link TaskDefinition} objects representing the tasks.
      */
     public List<TaskDefinition> getTasks() throws TaskDatabaseException;
+
+    /**
+     * Retrive a list of user task definitions from the database.
+     * @param userid
+     * @return a list of {@link TaskDefinition} objects representing the tasks.
+     * @throws TaskDatabaseException
+     */
+    public List<TaskDefinition> getUserTasks(String userid) throws TaskDatabaseException;
+
     /**
      * Adds a new task to the database.
      *

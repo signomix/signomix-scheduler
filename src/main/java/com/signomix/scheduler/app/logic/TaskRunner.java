@@ -11,9 +11,11 @@ import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 
+import com.signomix.common.User;
 import com.signomix.scheduler.adapters.driven.TaskDatabase;
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.app.ports.driven.TaskDatabaseException;
+import com.signomix.scheduler.app.ports.driving.ForScheduler;
 import com.signomix.scheduler.dto.TaskDefinition;
 
 import io.agroal.api.AgroalDataSource;
@@ -24,7 +26,7 @@ import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 
 @ApplicationScoped
-public class TaskRunner {
+public class TaskRunner implements ForScheduler {
 
     @Inject
     Logger logger;
@@ -86,6 +88,45 @@ public class TaskRunner {
                 .build();
         try {
             quartz.scheduleJob(job, trigger);
+        } catch (SchedulerException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void reloadSystemTasks(User user) {
+        try {
+            List<TaskDefinition> tasks = jobDatabase.getTasks();
+            for (TaskDefinition task : tasks) {
+                unscheduleTask(task);
+                scheduleTask(task);
+            }
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void reloadTask(long taskId, User user) {
+        try {
+            TaskDefinition task = jobDatabase.getTask(taskId);
+            if(task.userId==null || !task.userId.equals(user.uid)){
+                // Task does not belong to the user
+                return;
+            }
+            unscheduleTask(task);
+            scheduleTask(task);
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private void unscheduleTask(TaskDefinition definition) {
+        try {
+            quartz.deleteJob(JobBuilder.newJob().withIdentity(definition.jobName, definition.jobGroup).build().getKey());
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -219,7 +260,7 @@ public class TaskRunner {
         // Report tasks
         task = new TaskDefinition();
         task.id = 7L;
-        task.enabled = false;
+        task.enabled = true;
         task.type = TaskDefinition.REPORT;
         task.jobName = "daily-report";
         task.jobGroup = "reports";
@@ -230,7 +271,8 @@ public class TaskRunner {
         task.jobDataMap.put("token", "sgx_d67e4afeade49409ef73b704cf3415eb");
         task.jobDataMap.put("email", "g.skorupa@gmail.com");
         task.jobDataMap.put("subject", "Daily report");
-        task.jobDataMap.put("dql", "report DqlReport eui IOTEMULATOR channel temperature,humidity last 10 format csv");
+        task.jobDataMap.put("attachment", "report.html");
+        task.jobDataMap.put("dql", "report DqlReport eui IOTEMULATOR channel temperature,humidity last 10 format html");
         try {
             jobDatabase.addTask(task);
         } catch (TaskDatabaseException e) {

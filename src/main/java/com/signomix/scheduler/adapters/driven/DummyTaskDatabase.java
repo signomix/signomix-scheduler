@@ -26,6 +26,13 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
+    public List<TaskDefinition> getUserTasks(String userId) {
+        return tasks.values().stream().filter(
+            t -> (userId==null||userId.isEmpty())?t.userId==null:t.userId.equals(userId)
+        ).toList();
+    }
+
+    @Override
     public void createDatabase() {
         tasks= new HashMap<>();
         // Quarkus cron format: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html

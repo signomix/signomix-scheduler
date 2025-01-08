@@ -30,11 +30,11 @@ public class Job {
         // 3. if task definition is found and enabled, check modification date and reschedule if updated
     }
 
-    protected void sendEmail(String email, String subject, String content) {
-        //TODO: implement email sending
+    protected void sendEmail(String email, String subject, String content, String attachmentFileName) {
         String message =
         email + "\n" +
         subject + "\n" +
+        attachmentFileName + "\n" +
         content;
 
         publish("email", message);
