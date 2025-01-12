@@ -162,8 +162,10 @@ public class TaskRunner implements ForScheduler {
         task.type = TaskDefinition.EVENT;
         task.jobName = "backup";
         task.jobGroup = "events";
-        task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
-        task.nlScheduleDefinition = "Every 5 minutes";
+        //task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
+        // every day at 23:45
+        task.scheduleDefinition = "0 45 23 * * ?";
+        task.nlScheduleDefinition = "Every day at 23:45";
         task.triggerName = "backup-trigger";
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
@@ -177,7 +179,7 @@ public class TaskRunner implements ForScheduler {
             }
         }
 
-        task = new TaskDefinition();
+/*         task = new TaskDefinition();
         task.id = 3L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "archive";
@@ -195,9 +197,9 @@ public class TaskRunner implements ForScheduler {
             if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
                 throw e;
             }
-        }
+        } */
 
-        task = new TaskDefinition();
+        /* task = new TaskDefinition();
         task.id = 4L;
         task.type = TaskDefinition.EVENT;
         task.jobName = "datacleaner";
@@ -215,7 +217,7 @@ public class TaskRunner implements ForScheduler {
             if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
                 throw e;
             }
-        }
+        } */
 
         task = new TaskDefinition();
         task.id = 5L;
@@ -264,8 +266,10 @@ public class TaskRunner implements ForScheduler {
         task.type = TaskDefinition.REPORT;
         task.jobName = "daily-report";
         task.jobGroup = "reports";
-        task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
-        task.nlScheduleDefinition = "Every 5 minutes";
+        //task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
+        // every day at 00:15
+        task.scheduleDefinition = "0 15 0 * * ?";
+        task.nlScheduleDefinition = "Every day at 00:15";
         task.triggerName = "daily-report-trigger";
         task.triggerGroup = "reports";
         task.jobDataMap.put("token", "sgx_d67e4afeade49409ef73b704cf3415eb");
