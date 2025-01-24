@@ -3,16 +3,17 @@ package com.signomix.scheduler.adapters.driving;
 import org.jboss.logging.Logger;
 
 import com.signomix.common.User;
-import com.signomix.scheduler.app.logic.TaskRunner;
 import com.signomix.scheduler.app.ports.driving.AuthPort;
 import com.signomix.scheduler.app.ports.driving.ForScheduler;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
 
 @ApplicationScoped
@@ -25,7 +26,29 @@ public class SchedulerApi {
     @Inject
     AuthPort authPort;
 
-    ForScheduler schedulerPort = new TaskRunner();
+    @Inject
+    ForScheduler schedulerPort;
+
+    @GET
+    @Path("/tasks")
+    public Response getTasks(@HeaderParam("Authentication") String token, 
+    @QueryParam("offset") Integer offset, @QueryParam("limit") Integer limit) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        return Response.ok(schedulerPort.getTasks(user,offset,limit)).build();
+    }
+
+    @GET
+    @Path("/task/{taskId}")
+    public Response getTask(@HeaderParam("Authentication") String token, @PathParam("taskId") Long taskId) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        return Response.ok(schedulerPort.getTask(taskId, user)).build();
+    }
 
     @POST
     @Path("/reload")

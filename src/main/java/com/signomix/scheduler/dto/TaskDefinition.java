@@ -9,6 +9,7 @@ public class TaskDefinition {
     public final static int WEBHOOK = 3; // Call an external service (webhook)
     public final static int EMAIL = 4; // Send an email
     public final static int SMS = 5; // Send an SMS
+    public final static int SYS_COMMAND = 6; // Execute a system command
 
     public Long id;
     public int type;

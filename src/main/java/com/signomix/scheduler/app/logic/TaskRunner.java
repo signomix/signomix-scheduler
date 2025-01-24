@@ -1,12 +1,14 @@
 package com.signomix.scheduler.app.logic;
 
 import java.util.List;
+import java.util.Set;
 
 import org.jboss.logging.Logger;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.JobBuilder;
 import org.quartz.JobDataMap;
 import org.quartz.JobDetail;
+import org.quartz.JobKey;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
@@ -38,18 +40,31 @@ public class TaskRunner implements ForScheduler {
     @DataSource("olap")
     AgroalDataSource olapDs;
 
-    ForAccessTasksDatabase jobDatabase = new TaskDatabase();
+    ForAccessTasksDatabase jobDatabase;
 
     void onStart(@Observes StartupEvent event) throws SchedulerException, TaskDatabaseException {
+        jobDatabase = new TaskDatabase();
         logger.info("The application is starting...");
         jobDatabase.setDataSource(olapDs);
         jobDatabase.createDatabase();
+        // stop all running tasks if any
+        Set<JobKey> keys = quartz.getJobKeys(null);
+        for (JobKey key : keys) {
+            logger.info("Deleting task: " + key);
+            try {
+                quartz.deleteJob(key);
+            } catch (SchedulerException e) {
+                logger.error("Error deleting task: " + key);
+            }
+        }
+        // create and schedule system tasks
         createSystemTasks();
-        List<TaskDefinition> tasks = jobDatabase.getTasks();
-        logger.info("Tasks in database: " + tasks.size());
-        for (TaskDefinition task : tasks) {
-            logger.info("Task: " + task.jobName + " with schedule: " + task.scheduleDefinition);
+        jobDatabase.getTasks().forEach(task -> {
             scheduleTask(task);
+        });
+        keys = quartz.getJobKeys(null);
+        for (JobKey key : keys) {
+            logger.info("Task: " + key + " is scheduled.");
         }
     }
 
@@ -72,6 +87,9 @@ public class TaskRunner implements ForScheduler {
                 break;
             case TaskDefinition.REPORT:
                 jobBuilder = JobBuilder.newJob(ReportJob.class);
+                break;
+            case TaskDefinition.SYS_COMMAND:
+                jobBuilder = JobBuilder.newJob(SystemCommandJob.class);
                 break;
             default:
                 return;
@@ -112,7 +130,7 @@ public class TaskRunner implements ForScheduler {
     public void reloadTask(long taskId, User user) {
         try {
             TaskDefinition task = jobDatabase.getTask(taskId);
-            if(task.userId==null || !task.userId.equals(user.uid)){
+            if (task.userId == null || !task.userId.equals(user.uid)) {
                 // Task does not belong to the user
                 return;
             }
@@ -124,9 +142,37 @@ public class TaskRunner implements ForScheduler {
         }
     }
 
+    @Override
+    public TaskDefinition getTask(long taskId, User user) {
+        try {
+            TaskDefinition task = jobDatabase.getTask(taskId);
+            if (task.userId == null || !task.userId.equals(user.uid)) {
+                // Task does not belong to the user
+                return null;
+            }
+            return task;
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public List<TaskDefinition> getTasks(User user, Integer offset, Integer limit) {
+        try {
+            return jobDatabase.getTasks();
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void unscheduleTask(TaskDefinition definition) {
         try {
-            quartz.deleteJob(JobBuilder.newJob().withIdentity(definition.jobName, definition.jobGroup).build().getKey());
+            quartz.deleteJob(
+                    JobBuilder.newJob().withIdentity(definition.jobName, definition.jobGroup).build().getKey());
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -162,7 +208,7 @@ public class TaskRunner implements ForScheduler {
         task.type = TaskDefinition.EVENT;
         task.jobName = "backup";
         task.jobGroup = "events";
-        //task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
+        // task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
         // every day at 23:45
         task.scheduleDefinition = "0 45 23 * * ?";
         task.nlScheduleDefinition = "Every day at 23:45";
@@ -179,13 +225,14 @@ public class TaskRunner implements ForScheduler {
             }
         }
 
-/*         task = new TaskDefinition();
+        task = new TaskDefinition();
         task.id = 3L;
         task.type = TaskDefinition.EVENT;
+        task.enabled = false;
         task.jobName = "archive";
         task.jobGroup = "events";
-        task.scheduleDefinition = "0 0/10 * * * ?"; // Every 10 minutes
-        task.nlScheduleDefinition = "Every 10 minutes";
+        task.scheduleDefinition = "0 0/30 * * * ?"; // Every 10 minutes
+        task.nlScheduleDefinition = "Every 30 minutes";
         task.triggerName = "archive-trigger";
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
@@ -197,11 +244,12 @@ public class TaskRunner implements ForScheduler {
             if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
                 throw e;
             }
-        } */
+        }
 
-        /* task = new TaskDefinition();
+        task = new TaskDefinition();
         task.id = 4L;
         task.type = TaskDefinition.EVENT;
+        task.enabled = false;
         task.jobName = "datacleaner";
         task.jobGroup = "events";
         task.scheduleDefinition = "0 0/15 * * * ?"; // Every 15 minutes
@@ -217,11 +265,12 @@ public class TaskRunner implements ForScheduler {
             if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
                 throw e;
             }
-        } */
+        }
 
         task = new TaskDefinition();
         task.id = 5L;
         task.type = TaskDefinition.EVENT;
+        task.enabled = true;
         task.jobName = "devicechecker";
         task.jobGroup = "events";
         task.scheduleDefinition = "0 0/20 * * * ?"; // Every 20 minutes
@@ -266,7 +315,7 @@ public class TaskRunner implements ForScheduler {
         task.type = TaskDefinition.REPORT;
         task.jobName = "daily-report";
         task.jobGroup = "reports";
-        //task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
+        // task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
         // every day at 00:15
         task.scheduleDefinition = "0 15 0 * * ?";
         task.nlScheduleDefinition = "Every day at 00:15";
@@ -285,6 +334,28 @@ public class TaskRunner implements ForScheduler {
                 throw e;
             }
         }
+
+        task = new TaskDefinition();
+        task.id = 8L;
+        task.type = TaskDefinition.EVENT;
+        task.enabled = true;
+        task.jobName = "devicechecker2";
+        task.jobGroup = "events";
+        task.scheduleDefinition = "0 0/10 * * * ?"; // Every 20 minutes
+        task.nlScheduleDefinition = "Every 10 minutes";
+        task.triggerName = "devicechecker2-trigger";
+        task.triggerGroup = "events";
+        task.jobDataMap.put("channel", "commands");
+        task.jobDataMap.put("message", "devicechecker-paid");
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
+
     }
 
 }
