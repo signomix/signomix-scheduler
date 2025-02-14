@@ -356,6 +356,28 @@ public class TaskRunner implements ForScheduler {
             }
         }
 
+        // temporary solution
+        task = new TaskDefinition();
+        task.id = 9L;
+        task.type = TaskDefinition.EVENT;
+        task.enabled = true;
+        task.jobName = "reservationsync";
+        task.jobGroup = "events";
+        task.scheduleDefinition = "0 0/2 * * * ?";
+        task.nlScheduleDefinition = "Every 2 minutes";
+        task.triggerName = "reservationsync-trigger";
+        task.triggerGroup = "events";
+        task.jobDataMap.put("channel", "commands");
+        task.jobDataMap.put("message", "reservationsync");
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }
+
     }
 
 }
