@@ -293,8 +293,8 @@ public class TaskRunner implements ForScheduler {
         task.type = TaskDefinition.EVENT;
         task.jobName = "commandrunner";
         task.jobGroup = "events";
-        task.scheduleDefinition = "0 0/30 * * * ?"; // Every 30 minutes
-        task.nlScheduleDefinition = "Every 30 minutes";
+        task.scheduleDefinition = "0 0/3 * * * ?"; // Every 3 minutes
+        task.nlScheduleDefinition = "Every 3 minutes";
         task.triggerName = "commandrunner-trigger";
         task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
