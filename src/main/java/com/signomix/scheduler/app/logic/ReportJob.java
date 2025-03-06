@@ -21,6 +21,7 @@ public class ReportJob extends Job implements org.quartz.Job {
 
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
+        logger.info("Executing report job " + context.getJobDetail().getKey());
         Long id = context.getMergedJobDataMap().getLong("id");
         checkAndReschedule(id);
         String token = (String) context.getMergedJobDataMap().get("token");

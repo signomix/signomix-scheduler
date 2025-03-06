@@ -80,20 +80,22 @@ public class TaskRunner implements ForScheduler {
             jobDataMap.put(k, v);
         });
         jobDataMap.put("id", definition.id);
-        JobBuilder jobBuilder;
-        switch (definitionType) {
-            case TaskDefinition.EVENT:
-                jobBuilder = JobBuilder.newJob(EventJob.class);
-                break;
-            case TaskDefinition.REPORT:
-                jobBuilder = JobBuilder.newJob(ReportJob.class);
-                break;
-            case TaskDefinition.SYS_COMMAND:
-                jobBuilder = JobBuilder.newJob(SystemCommandJob.class);
-                break;
-            default:
-                return;
-        }
+        JobBuilder jobBuilder = JobBuilder.newJob(getJobClass(definitionType));
+        /*
+         * switch (definitionType) {
+         * case TaskDefinition.EVENT:
+         * jobBuilder = JobBuilder.newJob(EventJob.class);
+         * break;
+         * case TaskDefinition.REPORT:
+         * jobBuilder = JobBuilder.newJob(ReportJob.class);
+         * break;
+         * case TaskDefinition.SYS_COMMAND:
+         * jobBuilder = JobBuilder.newJob(SystemCommandJob.class);
+         * break;
+         * default:
+         * return;
+         * }
+         */
         JobDetail job = jobBuilder
                 .withIdentity(definition.jobName, definition.jobGroup)
                 .setJobData(jobDataMap)
@@ -130,8 +132,8 @@ public class TaskRunner implements ForScheduler {
     public void reloadTask(long taskId, User user) {
         try {
             TaskDefinition task = jobDatabase.getTask(taskId);
-            if (task.userId == null || !task.userId.equals(user.uid)) {
-                // Task does not belong to the user
+            if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
+                // only system owner or task owner can access task
                 return;
             }
             unscheduleTask(task);
@@ -146,12 +148,16 @@ public class TaskRunner implements ForScheduler {
     public TaskDefinition getTask(long taskId, User user) {
         try {
             TaskDefinition task = jobDatabase.getTask(taskId);
-            if (task.userId == null || !task.userId.equals(user.uid)) {
-                // Task does not belong to the user
+            logger.info("Task: " + task.id + " " + task.userId + " user id/type: " + user.uid + "/" + user.type);
+            if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
+                // only system owner or task owner can access task
                 return null;
             }
             return task;
         } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -169,13 +175,71 @@ public class TaskRunner implements ForScheduler {
         return null;
     }
 
+    @Override
+    public TaskDefinition createTask(TaskDefinition task, User user) {
+        if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
+            // only system owner or task owner can access task
+            return null;
+        }
+        try {
+            task.userId = user.uid;
+            jobDatabase.addTask(task);
+            scheduleTask(task);
+            return task;
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public TaskDefinition updateTask(TaskDefinition task, User user) {
+        try {
+            TaskDefinition oldTask = jobDatabase.getTask(task.id);
+            if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
+                // only system owner or task owner can access task
+                logger.info("No authorization : " + task.id + " " + task.userId + " user id/type: " + user.uid + "/"
+                        + user.type);
+                return null;
+            }
+            jobDatabase.updateTask(task);
+            unscheduleTask(oldTask);
+            scheduleTask(task);
+            return task;
+        } catch (TaskDatabaseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private void unscheduleTask(TaskDefinition definition) {
         try {
-            quartz.deleteJob(
-                    JobBuilder.newJob().withIdentity(definition.jobName, definition.jobGroup).build().getKey());
+            boolean deleted = quartz.deleteJob(
+                    JobBuilder.newJob(getJobClass(definition.type))
+                            .withIdentity(definition.jobName, definition.jobGroup).build().getKey());
+            if (deleted) {
+                logger.info("Task: " + definition.jobName + " unscheduled.");
+            } else {
+                logger.error("Task: " + definition.jobName + " not unscheduled.");
+            }
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
+        }
+    }
+
+    private Class getJobClass(int type) {
+        switch (type) {
+            case TaskDefinition.EVENT:
+                return EventJob.class;
+            case TaskDefinition.REPORT:
+                return ReportJob.class;
+            case TaskDefinition.SYS_COMMAND:
+                return SystemCommandJob.class;
+            default:
+                return null;
         }
     }
 
@@ -317,11 +381,12 @@ public class TaskRunner implements ForScheduler {
         task.jobGroup = "reports";
         // task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
         // every day at 00:15
-        task.scheduleDefinition = "0 15 0 * * ?";
+        // task.scheduleDefinition = "0 15 0 * * ?";
+        task.scheduleDefinition = "0 0/30 0 * * ?";
         task.nlScheduleDefinition = "Every day at 00:15";
         task.triggerName = "daily-report-trigger";
         task.triggerGroup = "reports";
-        task.jobDataMap.put("token", "sgx_d67e4afeade49409ef73b704cf3415eb");
+        task.jobDataMap.put("token", "sgx_7d28a2aa17ebaadf5657c4362843b4de");
         task.jobDataMap.put("email", "g.skorupa@gmail.com");
         task.jobDataMap.put("subject", "Daily report");
         task.jobDataMap.put("attachment", "report.html");

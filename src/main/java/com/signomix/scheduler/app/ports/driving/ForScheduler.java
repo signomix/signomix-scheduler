@@ -15,4 +15,8 @@ public interface ForScheduler {
 
     public List<TaskDefinition> getTasks(User user, Integer offset, Integer limit);
 
+    public TaskDefinition createTask(TaskDefinition task, User user);
+
+    public TaskDefinition updateTask(TaskDefinition task, User user);
+
 }

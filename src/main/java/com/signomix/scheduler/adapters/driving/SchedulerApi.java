@@ -5,12 +5,14 @@ import org.jboss.logging.Logger;
 import com.signomix.common.User;
 import com.signomix.scheduler.app.ports.driving.AuthPort;
 import com.signomix.scheduler.app.ports.driving.ForScheduler;
+import com.signomix.scheduler.dto.TaskDefinition;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
@@ -47,7 +49,37 @@ public class SchedulerApi {
         if (user == null) {
             return Response.status(Response.Status.UNAUTHORIZED).build();
         }
-        return Response.ok(schedulerPort.getTask(taskId, user)).build();
+        TaskDefinition task = schedulerPort.getTask(taskId, user);
+        if (task == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        logger.info("Task: " + task.id+ " "+task.jobName);   
+        return Response.ok(task).build();
+    }
+
+    @PUT
+    @Path("/task/{taskId}")
+    public Response updateTask(@HeaderParam("Authentication") String token, @PathParam("taskId") Long taskId, TaskDefinition task) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        if (schedulerPort.getTask(taskId, user) == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        schedulerPort.updateTask(task, user);
+        return Response.ok().build();
+    }
+
+    @POST
+    @Path("/task")
+    public Response createTask(@HeaderParam("Authentication") String token, TaskDefinition task) {
+        User user = authPort.getUser(token);
+        if (user == null) {
+            return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+        schedulerPort.createTask(task, user);
+        return Response.ok().build();
     }
 
     @POST
