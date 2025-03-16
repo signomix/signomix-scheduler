@@ -53,7 +53,7 @@ public class SchedulerApi {
         if (task == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        logger.info("Task: " + task.id+ " "+task.jobName);   
+        logger.info("Task: " + task.id+ " "+task.getJobName());   
         return Response.ok(task).build();
     }
 

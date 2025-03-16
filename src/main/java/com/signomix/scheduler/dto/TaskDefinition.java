@@ -1,5 +1,6 @@
 package com.signomix.scheduler.dto;
 
+import java.beans.Transient;
 import java.util.Map;
 
 public class TaskDefinition {
@@ -15,12 +16,65 @@ public class TaskDefinition {
     public int type;
     public String userId;
     public boolean enabled = true;
-    public String triggerName;
-    public String triggerGroup;
     public String nlScheduleDefinition; // Schedule definition in natural language
     public String scheduleDefinition;   // Schedule definition in cron format
-    public String jobName;
-    public String jobGroup;
     public Map<String, String> jobDataMap = new java.util.HashMap<>();
+    public String description;
+
+    @Transient
+    public String getJobName() {
+        return "job"+id;
+    }
+
+    @Transient
+    public String getTriggerName() {
+        return "trigger"+id;
+    }
+
+    @Transient
+    public String getJobGroup() {
+        switch (type) {
+            case EVENT:
+                return "event";
+            case REPORT:
+                return "report";
+            case DATA_WEBHOOK:
+                return "data_webhook";
+            case WEBHOOK:
+                return "webhook";
+            case EMAIL:
+                return "email";
+            case SMS:
+                return "sms";
+            case SYS_COMMAND:
+                return "sys_command";
+            default:
+                return "default";   
+        }
+    }
+
+    @Transient
+    public String getTriggerGroup() {
+        switch (type) {
+            case EVENT:
+                return "event";
+            case REPORT:
+                return "report";
+            case DATA_WEBHOOK:
+                return "data_webhook";
+            case WEBHOOK:
+                return "webhook";
+            case EMAIL:
+                return "email";
+            case SMS:
+                return "sms";
+            case SYS_COMMAND:
+                return "sys_command";
+            default:
+                return "default";   
+        }
+    }
+
+
 
 }

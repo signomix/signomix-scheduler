@@ -65,6 +65,11 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     @Override
     public void setDataSource(AgroalDataSource dataSource) {
     }
+
+    @Override
+    public int getTaskCount() {
+        return tasks.size();
+    }
     
 }
 

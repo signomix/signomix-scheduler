@@ -70,38 +70,23 @@ public class TaskRunner implements ForScheduler {
 
     public void scheduleTask(TaskDefinition definition) {
         if (!definition.enabled) {
-            logger.info("Task: " + definition.jobName + " is disabled.");
+            logger.info("Task: " + definition.getJobName() + " is disabled.");
             return;
         }
         int definitionType = definition.type;
-        logger.info("Scheduling task: " + definition.jobName + " with schedule: " + definition.scheduleDefinition);
+        logger.info("Scheduling task: " + definition.getJobName() + " with schedule: " + definition.scheduleDefinition);
         JobDataMap jobDataMap = new JobDataMap();
         definition.jobDataMap.forEach((k, v) -> {
             jobDataMap.put(k, v);
         });
         jobDataMap.put("id", definition.id);
         JobBuilder jobBuilder = JobBuilder.newJob(getJobClass(definitionType));
-        /*
-         * switch (definitionType) {
-         * case TaskDefinition.EVENT:
-         * jobBuilder = JobBuilder.newJob(EventJob.class);
-         * break;
-         * case TaskDefinition.REPORT:
-         * jobBuilder = JobBuilder.newJob(ReportJob.class);
-         * break;
-         * case TaskDefinition.SYS_COMMAND:
-         * jobBuilder = JobBuilder.newJob(SystemCommandJob.class);
-         * break;
-         * default:
-         * return;
-         * }
-         */
         JobDetail job = jobBuilder
-                .withIdentity(definition.jobName, definition.jobGroup)
+                .withIdentity(definition.getJobName(), definition.getJobGroup())
                 .setJobData(jobDataMap)
                 .build();
         Trigger trigger = TriggerBuilder.newTrigger()
-                .withIdentity(definition.triggerName, definition.triggerGroup)
+                .withIdentity(definition.getTriggerName(), definition.getTriggerGroup())
                 .startNow()
                 .withSchedule(
                         CronScheduleBuilder.cronSchedule(definition.scheduleDefinition))
@@ -218,11 +203,11 @@ public class TaskRunner implements ForScheduler {
         try {
             boolean deleted = quartz.deleteJob(
                     JobBuilder.newJob(getJobClass(definition.type))
-                            .withIdentity(definition.jobName, definition.jobGroup).build().getKey());
+                            .withIdentity(definition.getJobName(), definition.getJobGroup()).build().getKey());
             if (deleted) {
-                logger.info("Task: " + definition.jobName + " unscheduled.");
+                logger.info("Task: " + definition.getJobName() + " unscheduled.");
             } else {
-                logger.error("Task: " + definition.jobName + " not unscheduled.");
+                logger.error("Task: " + definition.getJobName() + " not unscheduled.");
             }
         } catch (SchedulerException e) {
             // TODO Auto-generated catch block
@@ -244,18 +229,29 @@ public class TaskRunner implements ForScheduler {
     }
 
     private void createSystemTasks() throws TaskDatabaseException {
+        try{
+            int numberOfTasks = jobDatabase.getTaskCount();
+            if(numberOfTasks>0){
+                return;
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+            return;
+        }
         // Event tasks
         TaskDefinition task;
 
         task = new TaskDefinition();
-        task.id = 1L;
+        //task.id = 1L;
         task.type = TaskDefinition.EVENT;
-        task.jobName = "system-monitor";
-        task.jobGroup = "events";
+        task.enabled = true;
+        task.description = "System monitor";
+        //task.jobName = "system-monitor";
+        //task.jobGroup = "events";
         task.scheduleDefinition = "0 0/2 * * * ?"; // Every 2 minutes
         task.nlScheduleDefinition = "Every 2 minutes";
-        task.triggerName = "monitor-trigger";
-        task.triggerGroup = "events";
+        //task.triggerName = "monitor-trigger";
+        //task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "system-monitor");
         try {
@@ -268,16 +264,14 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 2L;
+        //task.id = 2L;
         task.type = TaskDefinition.EVENT;
-        task.jobName = "backup";
-        task.jobGroup = "events";
+        task.enabled = true;
+        task.description = "Backup";
         // task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
         // every day at 23:45
         task.scheduleDefinition = "0 45 23 * * ?";
         task.nlScheduleDefinition = "Every day at 23:45";
-        task.triggerName = "backup-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "backup");
         try {
@@ -290,15 +284,12 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 3L;
+        //task.id = 3L;
         task.type = TaskDefinition.EVENT;
         task.enabled = false;
-        task.jobName = "archive";
-        task.jobGroup = "events";
+        task.description = "Archive";
         task.scheduleDefinition = "0 0/30 * * * ?"; // Every 10 minutes
         task.nlScheduleDefinition = "Every 30 minutes";
-        task.triggerName = "archive-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "archive");
         try {
@@ -311,15 +302,12 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 4L;
+        //task.id = 4L;
         task.type = TaskDefinition.EVENT;
         task.enabled = false;
-        task.jobName = "datacleaner";
-        task.jobGroup = "events";
+        task.description = "Data cleaner";
         task.scheduleDefinition = "0 0/15 * * * ?"; // Every 15 minutes
         task.nlScheduleDefinition = "Every 15 minutes";
-        task.triggerName = "datacleaner-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "datacleaner");
         try {
@@ -332,15 +320,12 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 5L;
+        //task.id = 5L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
-        task.jobName = "devicechecker";
-        task.jobGroup = "events";
+        task.description = "Device checker";
         task.scheduleDefinition = "0 0/20 * * * ?"; // Every 20 minutes
         task.nlScheduleDefinition = "Every 20 minutes";
-        task.triggerName = "devicechecker-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "devicechecker");
         try {
@@ -353,14 +338,12 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 6L;
+        //task.id = 6L;
         task.type = TaskDefinition.EVENT;
-        task.jobName = "commandrunner";
-        task.jobGroup = "events";
+        task.enabled = true;
+        task.description = "Send waiting device commands";
         task.scheduleDefinition = "0 0/3 * * * ?"; // Every 3 minutes
         task.nlScheduleDefinition = "Every 3 minutes";
-        task.triggerName = "commandrunner-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "devicecommands");
         try {
@@ -374,18 +357,15 @@ public class TaskRunner implements ForScheduler {
 
         // Report tasks
         task = new TaskDefinition();
-        task.id = 7L;
+        //task.id = 7L;
         task.enabled = true;
+        task.description = "Daily report example";
         task.type = TaskDefinition.REPORT;
-        task.jobName = "daily-report";
-        task.jobGroup = "reports";
         // task.scheduleDefinition = "0 0/5 * * * ?"; // Every 5 minutes
         // every day at 00:15
         // task.scheduleDefinition = "0 15 0 * * ?";
         task.scheduleDefinition = "0 0/30 0 * * ?";
         task.nlScheduleDefinition = "Every day at 00:15";
-        task.triggerName = "daily-report-trigger";
-        task.triggerGroup = "reports";
         task.jobDataMap.put("token", "sgx_7d28a2aa17ebaadf5657c4362843b4de");
         task.jobDataMap.put("email", "g.skorupa@gmail.com");
         task.jobDataMap.put("subject", "Daily report");
@@ -401,15 +381,12 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        task.id = 8L;
+        //task.id = 8L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
-        task.jobName = "devicechecker2";
-        task.jobGroup = "events";
+        task.description = "Paid device checker";
         task.scheduleDefinition = "0 0/10 * * * ?"; // Every 20 minutes
         task.nlScheduleDefinition = "Every 10 minutes";
-        task.triggerName = "devicechecker2-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "devicechecker-paid");
         try {
@@ -423,15 +400,12 @@ public class TaskRunner implements ForScheduler {
 
         // temporary solution
         task = new TaskDefinition();
-        task.id = 9L;
+        //task.id = 9L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
-        task.jobName = "reservationsync";
-        task.jobGroup = "events";
+        task.description = "Reservation sync";
         task.scheduleDefinition = "0 0/2 * * * ?";
         task.nlScheduleDefinition = "Every 2 minutes";
-        task.triggerName = "reservationsync-trigger";
-        task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "reservationsync");
         try {
@@ -442,6 +416,26 @@ public class TaskRunner implements ForScheduler {
                 throw e;
             }
         }
+
+        //system command job
+        task = new TaskDefinition();
+        //task.id = 10L;
+        task.type = TaskDefinition.SYS_COMMAND;
+        task.enabled = false;
+        task.description = "Example system command";
+        task.scheduleDefinition = "0 0/1 * * * ?";
+        task.nlScheduleDefinition = "Every 1 minute";
+        task.jobDataMap.put("command", "df");
+        task.jobDataMap.put("option0", "-h");
+        try {
+            jobDatabase.addTask(task);
+        } catch (TaskDatabaseException e) {
+            // Ignore duplicate task ID
+            if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
+                throw e;
+            }
+        }   
+
 
     }
 

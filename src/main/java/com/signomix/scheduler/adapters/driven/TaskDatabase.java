@@ -28,12 +28,9 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                     type INT NOT NULL,
                     userid VARCHAR,
                     enabled BOOLEAN NOT NULL,
-                    trigger_name VARCHAR(64),
-                    trigger_group VARCHAR(64),
                     nl_schedule_definition VARCHAR(1024),
                     schedule_definition VARCHAR(255),
-                    job_name VARCHAR(64),
-                    job_group VARCHAR(64)
+                    description VARCHAR(255)
                 )
                     """;
 
@@ -74,13 +71,10 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 definition.type = resultSet.getInt("type");
                 definition.enabled = resultSet.getBoolean("enabled");
                 definition.userId = resultSet.getString("userid");
-                definition.triggerName = resultSet.getString("trigger_name");
-                definition.triggerGroup = resultSet.getString("trigger_group");
                 definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
                 definition.scheduleDefinition = resultSet.getString("schedule_definition");
-                definition.jobName = resultSet.getString("job_name");
-                definition.jobGroup = resultSet.getString("job_group");
                 definition.jobDataMap = getTaskParameters(definition.id);
+                definition.description = resultSet.getString("description");
                 definitions.add(definition);
             }
             return definitions;
@@ -110,12 +104,9 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 definition.type = resultSet.getInt("type");
                 definition.enabled = resultSet.getBoolean("enabled");
                 definition.userId = resultSet.getString("userid");
-                definition.triggerName = resultSet.getString("trigger_name");
-                definition.triggerGroup = resultSet.getString("trigger_group");
                 definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
                 definition.scheduleDefinition = resultSet.getString("schedule_definition");
-                definition.jobName = resultSet.getString("job_name");
-                definition.jobGroup = resultSet.getString("job_group");
+                definition.description = resultSet.getString("description");
                 definition.jobDataMap = getTaskParameters(definition.id);
                 definitions.add(definition);
             }
@@ -132,16 +123,16 @@ public class TaskDatabase implements ForAccessTasksDatabase {
         if (task.id != null) {
             taskId = task.id;
             query = """
-                    INSERT INTO task_definition (id, type, enabled, userid, trigger_name, trigger_group, nl_schedule_definition, schedule_definition, job_name, job_group)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO task_definition (id, type, enabled, userid, nl_schedule_definition, schedule_definition,description)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (id) DO UPDATE SET
-                    type = EXCLUDED.type, enabled = EXCLUDED.enabled, userid = EXCLUDED.userid, trigger_name = EXCLUDED.trigger_name, trigger_group = EXCLUDED.trigger_group, nl_schedule_definition = EXCLUDED.nl_schedule_definition, schedule_definition = EXCLUDED.schedule_definition, job_name = EXCLUDED.job_name, job_group = EXCLUDED.job_group
+                    type = EXCLUDED.type, enabled = EXCLUDED.enabled, userid = EXCLUDED.userid, nl_schedule_definition = EXCLUDED.nl_schedule_definition, schedule_definition = EXCLUDED.schedule_definition, description = EXCLUDED.description
                     RETURNING id
                     """;
         } else {
             query = """
-                    INSERT INTO task_definition (type, enabled, userid, trigger_name, trigger_group, nl_schedule_definition, schedule_definition, job_name, job_group)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO task_definition (type, enabled, userid, nl_schedule_definition, schedule_definition, description)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     RETURNING id
                     """;
         }
@@ -152,22 +143,17 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 statement.setInt(2, task.type);
                 statement.setBoolean(3, task.enabled);
                 statement.setString(4, task.userId);
-                statement.setString(5, task.triggerName);
-                statement.setString(6, task.triggerGroup);
-                statement.setString(7, task.nlScheduleDefinition);
-                statement.setString(8, task.scheduleDefinition);
-                statement.setString(9, task.jobName);
-                statement.setString(10, task.jobGroup);
+                statement.setString(5, task.nlScheduleDefinition);
+                statement.setString(6, task.scheduleDefinition);
+                statement.setString(7, task.description);
+
             } else {
                 statement.setInt(1, task.type);
                 statement.setBoolean(2, task.enabled);
                 statement.setString(3, task.userId);
-                statement.setString(4, task.triggerName);
-                statement.setString(5, task.triggerGroup);
-                statement.setString(6, task.nlScheduleDefinition);
-                statement.setString(7, task.scheduleDefinition);
-                statement.setString(8, task.jobName);
-                statement.setString(9, task.jobGroup);
+                statement.setString(4, task.nlScheduleDefinition);
+                statement.setString(5, task.scheduleDefinition);
+                statement.setString(6, task.description);
             }
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -175,6 +161,7 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 }
             }
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Error adding task", e);
         }
         if (taskId != -1) {
@@ -197,12 +184,9 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                     definition.type = resultSet.getInt("type");
                     definition.enabled = resultSet.getBoolean("enabled");
                     definition.userId = resultSet.getString("userid");
-                    definition.triggerName = resultSet.getString("trigger_name");
-                    definition.triggerGroup = resultSet.getString("trigger_group");
                     definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
                     definition.scheduleDefinition = resultSet.getString("schedule_definition");
-                    definition.jobName = resultSet.getString("job_name");
-                    definition.jobGroup = resultSet.getString("job_group");
+                    definition.description = resultSet.getString("description");
                     definition.jobDataMap = getTaskParameters(taskId);
                     return definition;
                 } else {
@@ -218,7 +202,7 @@ public class TaskDatabase implements ForAccessTasksDatabase {
     public void updateTask(TaskDefinition task) {
         String query = """
                 UPDATE task_definition
-                SET type = ?, enabled = ?, userid = ?, trigger_name = ?, trigger_group = ?, nl_schedule_definition = ?, schedule_definition = ?, job_name = ?, job_group = ?
+                SET type = ?, enabled = ?, userid = ?,nl_schedule_definition = ?, schedule_definition = ?, description = ?
                 WHERE id = ?
                 """;
         try (Connection connection = datasource.getConnection();
@@ -226,13 +210,10 @@ public class TaskDatabase implements ForAccessTasksDatabase {
             statement.setInt(1, task.type);
             statement.setBoolean(2, task.enabled);
             statement.setString(3, task.userId);
-            statement.setString(4, task.triggerName);
-            statement.setString(5, task.triggerGroup);
-            statement.setString(6, task.nlScheduleDefinition);
-            statement.setString(7, task.scheduleDefinition);
-            statement.setString(8, task.jobName);
-            statement.setString(9, task.jobGroup);
-            statement.setLong(10, task.id);
+            statement.setString(4, task.nlScheduleDefinition);
+            statement.setString(5, task.scheduleDefinition);
+            statement.setString(6, task.description);
+            statement.setLong(7, task.id);
             statement.executeUpdate();
         } catch (Exception e) {
             throw new RuntimeException("Error updating task", e);
@@ -304,6 +285,22 @@ public class TaskDatabase implements ForAccessTasksDatabase {
             }
         } catch (Exception e) {
             throw new RuntimeException("Error getting task parameters", e);
+        }
+    }
+
+    @Override
+    public int getTaskCount() {
+        String query = "SELECT COUNT(*) FROM task_definition";
+        try (Connection connection = datasource.getConnection();
+                var statement = connection.createStatement();
+                var resultSet = statement.executeQuery(query)) {
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            } else {
+                return 0;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error getting task count", e);
         }
     }
 

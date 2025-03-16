@@ -61,5 +61,10 @@ public interface ForAccessTasksDatabase {
      * @param taskId the ID of the task to be deleted
      */
     public void deleteTask(long taskId) throws TaskDatabaseException;
+
+    /**
+     * Get number of tasks in the database
+     */
+    public int getTaskCount() throws TaskDatabaseException;
     
 }
