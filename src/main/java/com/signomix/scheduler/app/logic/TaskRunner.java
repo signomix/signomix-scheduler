@@ -168,7 +168,10 @@ public class TaskRunner implements ForScheduler {
         }
         try {
             task.userId = user.uid;
-            jobDatabase.addTask(task);
+            logger.info("Creating task: " + task.description + " user id/type: " + user.uid + "/" + user.type + " task id: "
+                    + task.id);
+            task.id = null;
+            task.id = jobDatabase.addTask(task);
             scheduleTask(task);
             return task;
         } catch (TaskDatabaseException e) {
