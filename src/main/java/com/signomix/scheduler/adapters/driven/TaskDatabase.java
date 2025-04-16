@@ -30,7 +30,8 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                     enabled BOOLEAN NOT NULL,
                     nl_schedule_definition VARCHAR(1024),
                     schedule_definition VARCHAR(255),
-                    description VARCHAR(255)
+                    description VARCHAR(255),
+                    organization INT
                 )
                     """;
 
@@ -75,6 +76,10 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 definition.scheduleDefinition = resultSet.getString("schedule_definition");
                 definition.jobDataMap = getTaskParameters(definition.id);
                 definition.description = resultSet.getString("description");
+                definition.organization = resultSet.getInt("organization");
+                if (resultSet.wasNull()) {
+                    definition.organization = null;
+                }
                 definitions.add(definition);
             }
             return definitions;
@@ -84,34 +89,44 @@ public class TaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
-    public List<TaskDefinition> getUserTasks(String userId) {
+    public List<TaskDefinition> getUserTasks(String userId, Integer organization) {
         ArrayList<TaskDefinition> definitions = new ArrayList<>();
         String query;
-        if (userId == null || userId.isEmpty()) {
-            query = "SELECT * FROM task_definition WHERE userid IS NULL";
+
+        if (organization != null) {
+            query = "SELECT * FROM task_definition WHERE userid = ? OR organization = ?";
         } else {
             query = "SELECT * FROM task_definition WHERE userid = ?";
         }
+
         try (Connection connection = datasource.getConnection();
                 var statement = connection.prepareStatement(query)) {
-            if (userId != null && !userId.isEmpty()) {
-                statement.setString(1, userId);
+
+            statement.setString(1, userId);
+            if (organization != null) {
+                statement.setInt(2, organization);
             }
-            var resultSet = statement.executeQuery(query);
-            while (resultSet.next()) {
-                TaskDefinition definition = new TaskDefinition();
-                definition.id = resultSet.getLong("id");
-                definition.type = resultSet.getInt("type");
-                definition.enabled = resultSet.getBoolean("enabled");
-                definition.userId = resultSet.getString("userid");
-                definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
-                definition.scheduleDefinition = resultSet.getString("schedule_definition");
-                definition.description = resultSet.getString("description");
-                definition.jobDataMap = getTaskParameters(definition.id);
-                definitions.add(definition);
+            try (var resultSet = statement.executeQuery();) {
+                while (resultSet.next()) {
+                    TaskDefinition definition = new TaskDefinition();
+                    definition.id = resultSet.getLong("id");
+                    definition.type = resultSet.getInt("type");
+                    definition.enabled = resultSet.getBoolean("enabled");
+                    definition.userId = resultSet.getString("userid");
+                    definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
+                    definition.scheduleDefinition = resultSet.getString("schedule_definition");
+                    definition.description = resultSet.getString("description");
+                    definition.jobDataMap = getTaskParameters(definition.id);
+                    definition.organization = resultSet.getInt("organization");
+                    if (resultSet.wasNull()) {
+                        definition.organization = null;
+                    }
+                    definitions.add(definition);
+                }
             }
             return definitions;
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("Error getting tasks", e);
         }
     }
@@ -123,16 +138,16 @@ public class TaskDatabase implements ForAccessTasksDatabase {
         if (task.id != null) {
             taskId = task.id;
             query = """
-                    INSERT INTO task_definition (id, type, enabled, userid, nl_schedule_definition, schedule_definition,description)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO task_definition (id, type, enabled, userid, nl_schedule_definition, schedule_definition,description, organization)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT (id) DO UPDATE SET
-                    type = EXCLUDED.type, enabled = EXCLUDED.enabled, userid = EXCLUDED.userid, nl_schedule_definition = EXCLUDED.nl_schedule_definition, schedule_definition = EXCLUDED.schedule_definition, description = EXCLUDED.description
+                    type = EXCLUDED.type, enabled = EXCLUDED.enabled, userid = EXCLUDED.userid, nl_schedule_definition = EXCLUDED.nl_schedule_definition, schedule_definition = EXCLUDED.schedule_definition, description = EXCLUDED.description, organization = EXCLUDED.organization
                     RETURNING id
                     """;
         } else {
             query = """
-                    INSERT INTO task_definition (type, enabled, userid, nl_schedule_definition, schedule_definition, description)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO task_definition (type, enabled, userid, nl_schedule_definition, schedule_definition, description, organization)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     RETURNING id
                     """;
         }
@@ -146,6 +161,11 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 statement.setString(5, task.nlScheduleDefinition);
                 statement.setString(6, task.scheduleDefinition);
                 statement.setString(7, task.description);
+                if (task.organization == null) {
+                    statement.setNull(8, java.sql.Types.INTEGER);
+                } else {
+                    statement.setInt(8, task.organization);
+                }
 
             } else {
                 statement.setInt(1, task.type);
@@ -154,6 +174,11 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                 statement.setString(4, task.nlScheduleDefinition);
                 statement.setString(5, task.scheduleDefinition);
                 statement.setString(6, task.description);
+                if (task.organization == null) {
+                    statement.setNull(7, java.sql.Types.INTEGER);
+                } else {
+                    statement.setInt(7, task.organization);
+                }
             }
             try (var resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
@@ -187,6 +212,10 @@ public class TaskDatabase implements ForAccessTasksDatabase {
                     definition.nlScheduleDefinition = resultSet.getString("nl_schedule_definition");
                     definition.scheduleDefinition = resultSet.getString("schedule_definition");
                     definition.description = resultSet.getString("description");
+                    definition.organization = resultSet.getInt("organization");
+                    if (resultSet.wasNull()) {
+                        definition.organization = null;
+                    }
                     definition.jobDataMap = getTaskParameters(taskId);
                     return definition;
                 } else {
@@ -202,7 +231,7 @@ public class TaskDatabase implements ForAccessTasksDatabase {
     public void updateTask(TaskDefinition task) {
         String query = """
                 UPDATE task_definition
-                SET type = ?, enabled = ?, userid = ?,nl_schedule_definition = ?, schedule_definition = ?, description = ?
+                SET type = ?, enabled = ?, userid = ?,nl_schedule_definition = ?, schedule_definition = ?, description = ?, organization=?
                 WHERE id = ?
                 """;
         try (Connection connection = datasource.getConnection();
@@ -213,7 +242,12 @@ public class TaskDatabase implements ForAccessTasksDatabase {
             statement.setString(4, task.nlScheduleDefinition);
             statement.setString(5, task.scheduleDefinition);
             statement.setString(6, task.description);
-            statement.setLong(7, task.id);
+            if (task.organization == null) {
+                statement.setNull(7, java.sql.Types.INTEGER);
+            } else {
+                statement.setInt(7, task.organization);
+            }
+            statement.setLong(8, task.id);
             statement.executeUpdate();
         } catch (Exception e) {
             throw new RuntimeException("Error updating task", e);

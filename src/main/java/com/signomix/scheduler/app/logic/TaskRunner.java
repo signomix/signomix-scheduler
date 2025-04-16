@@ -37,15 +37,17 @@ public class TaskRunner implements ForScheduler {
     org.quartz.Scheduler quartz;
 
     @Inject
-    @DataSource("olap")
-    AgroalDataSource olapDs;
+    @DataSource("oltp")
+    AgroalDataSource oltpDs;
 
     ForAccessTasksDatabase jobDatabase;
+
+    private static final Long DEFAULT_ORGANIZATION_ID = 1L;
 
     void onStart(@Observes StartupEvent event) throws SchedulerException, TaskDatabaseException {
         jobDatabase = new TaskDatabase();
         logger.info("The application is starting...");
-        jobDatabase.setDataSource(olapDs);
+        jobDatabase.setDataSource(oltpDs);
         jobDatabase.createDatabase();
         // stop all running tasks if any
         Set<JobKey> keys = quartz.getJobKeys(null);
@@ -151,8 +153,12 @@ public class TaskRunner implements ForScheduler {
 
     @Override
     public List<TaskDefinition> getTasks(User user, Integer offset, Integer limit) {
+        Integer organization = null;
+        if (user.organization != null && user.organization.intValue() != DEFAULT_ORGANIZATION_ID) {
+            organization = user.organization.intValue();
+        }
         try {
-            return jobDatabase.getTasks();
+            return jobDatabase.getUserTasks(user.uid, organization);
         } catch (TaskDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -162,14 +168,20 @@ public class TaskRunner implements ForScheduler {
 
     @Override
     public TaskDefinition createTask(TaskDefinition task, User user) {
+        if(user.type!=User.OWNER){
+            // only system owner can modify task
+            logger.info("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+            return null;
+        }
         if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
             // only system owner or task owner can access task
             return null;
         }
         try {
             task.userId = user.uid;
-            logger.info("Creating task: " + task.description + " user id/type: " + user.uid + "/" + user.type + " task id: "
-                    + task.id);
+            logger.info(
+                    "Creating task: " + task.description + " user id/type: " + user.uid + "/" + user.type + " task id: "
+                            + task.id);
             task.id = null;
             task.id = jobDatabase.addTask(task);
             scheduleTask(task);
@@ -185,10 +197,26 @@ public class TaskRunner implements ForScheduler {
     public TaskDefinition updateTask(TaskDefinition task, User user) {
         try {
             TaskDefinition oldTask = jobDatabase.getTask(task.id);
+            if(user.type!=User.OWNER){
+                // only system owner can modify task
+                logger.info("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+                return null;
+            }
             if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
                 // only system owner or task owner can access task
                 logger.info("No authorization : " + task.id + " " + task.userId + " user id/type: " + user.uid + "/"
                         + user.type);
+                return null;
+            }
+            if (task.organization != null) {
+                // only system owner or organization admin can modify task
+                if (user.type != User.OWNER
+                        || task.organization.intValue() != user.organization.intValue()
+                        || user.type != User.OWNER) {
+                    logger.info("No authorization : " + task.id + ", organization=" + task.organization);
+                    return null;
+                }
+                logger.info("No authorization : " + task.id + ", organization=" + task.organization);
                 return null;
             }
             jobDatabase.updateTask(task);
@@ -232,12 +260,12 @@ public class TaskRunner implements ForScheduler {
     }
 
     private void createSystemTasks() throws TaskDatabaseException {
-        try{
+        try {
             int numberOfTasks = jobDatabase.getTaskCount();
-            if(numberOfTasks>0){
+            if (numberOfTasks > 0) {
                 return;
             }
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             return;
         }
@@ -245,16 +273,16 @@ public class TaskRunner implements ForScheduler {
         TaskDefinition task;
 
         task = new TaskDefinition();
-        //task.id = 1L;
+        // task.id = 1L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "System monitor";
-        //task.jobName = "system-monitor";
-        //task.jobGroup = "events";
+        // task.jobName = "system-monitor";
+        // task.jobGroup = "events";
         task.scheduleDefinition = "0 0/2 * * * ?"; // Every 2 minutes
         task.nlScheduleDefinition = "Every 2 minutes";
-        //task.triggerName = "monitor-trigger";
-        //task.triggerGroup = "events";
+        // task.triggerName = "monitor-trigger";
+        // task.triggerGroup = "events";
         task.jobDataMap.put("channel", "commands");
         task.jobDataMap.put("message", "system-monitor");
         try {
@@ -267,7 +295,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 2L;
+        // task.id = 2L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "Backup";
@@ -287,7 +315,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 3L;
+        // task.id = 3L;
         task.type = TaskDefinition.EVENT;
         task.enabled = false;
         task.description = "Archive";
@@ -305,7 +333,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 4L;
+        // task.id = 4L;
         task.type = TaskDefinition.EVENT;
         task.enabled = false;
         task.description = "Data cleaner";
@@ -323,7 +351,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 5L;
+        // task.id = 5L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "Device checker";
@@ -341,7 +369,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 6L;
+        // task.id = 6L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "Send waiting device commands";
@@ -360,7 +388,7 @@ public class TaskRunner implements ForScheduler {
 
         // Report tasks
         task = new TaskDefinition();
-        //task.id = 7L;
+        // task.id = 7L;
         task.enabled = true;
         task.description = "Daily report example";
         task.type = TaskDefinition.REPORT;
@@ -384,7 +412,7 @@ public class TaskRunner implements ForScheduler {
         }
 
         task = new TaskDefinition();
-        //task.id = 8L;
+        // task.id = 8L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "Paid device checker";
@@ -403,7 +431,7 @@ public class TaskRunner implements ForScheduler {
 
         // temporary solution
         task = new TaskDefinition();
-        //task.id = 9L;
+        // task.id = 9L;
         task.type = TaskDefinition.EVENT;
         task.enabled = true;
         task.description = "Reservation sync";
@@ -420,9 +448,9 @@ public class TaskRunner implements ForScheduler {
             }
         }
 
-        //system command job
+        // system command job
         task = new TaskDefinition();
-        //task.id = 10L;
+        // task.id = 10L;
         task.type = TaskDefinition.SYS_COMMAND;
         task.enabled = false;
         task.description = "Example system command";
@@ -437,8 +465,7 @@ public class TaskRunner implements ForScheduler {
             if (!e.getMessage().equals(TaskDatabaseException.DUPLICATE_TASK_ID)) {
                 throw e;
             }
-        }   
-
+        }
 
     }
 

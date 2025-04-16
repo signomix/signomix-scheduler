@@ -33,7 +33,7 @@ public interface ForAccessTasksDatabase {
      * @return a list of {@link TaskDefinition} objects representing the tasks.
      * @throws TaskDatabaseException
      */
-    public List<TaskDefinition> getUserTasks(String userid) throws TaskDatabaseException;
+    public List<TaskDefinition> getUserTasks(String userid, Integer organization) throws TaskDatabaseException;
 
     /**
      * Adds a new task to the database.

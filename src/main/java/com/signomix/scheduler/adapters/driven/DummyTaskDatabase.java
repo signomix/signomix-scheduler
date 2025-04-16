@@ -26,7 +26,7 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
-    public List<TaskDefinition> getUserTasks(String userId) {
+    public List<TaskDefinition> getUserTasks(String userId, Integer organization) {
         return tasks.values().stream().filter(
             t -> (userId==null||userId.isEmpty())?t.userId==null:t.userId.equals(userId)
         ).toList();

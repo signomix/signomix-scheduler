@@ -15,6 +15,7 @@ public class TaskDefinition {
     public Long id;
     public int type;
     public String userId;
+    public Integer organization; // Organization ID
     public boolean enabled = true;
     public String nlScheduleDefinition; // Schedule definition in natural language
     public String scheduleDefinition;   // Schedule definition in cron format
