@@ -136,8 +136,14 @@ public class TaskRunner implements ForScheduler {
         try {
             TaskDefinition task = jobDatabase.getTask(taskId);
             logger.info("Task: " + task.id + " " + task.userId + " user id/type: " + user.uid + "/" + user.type);
-            if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
-                // only system owner or task owner can access task
+            boolean access = false;
+            if(user.type==User.OWNER || (task.userId!=null && task.userId.equals(user.uid))){
+                access=true;
+            }
+            if(task.organization!=null && task.organization.intValue()==user.organization.intValue()){
+                access=true;
+            }
+            if (!access) {
                 return null;
             }
             return task;
