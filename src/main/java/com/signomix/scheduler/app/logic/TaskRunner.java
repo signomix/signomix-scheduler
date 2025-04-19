@@ -52,27 +52,36 @@ public class TaskRunner implements ForScheduler {
         // stop all running tasks if any
         Set<JobKey> keys = quartz.getJobKeys(null);
         for (JobKey key : keys) {
-            logger.info("Deleting task: " + key);
+            if (logger.isDebugEnabled()) {
+                logger.debug("Deleting task: " + key);
+            }
             try {
                 quartz.deleteJob(key);
             } catch (SchedulerException e) {
                 logger.error("Error deleting task: " + key);
             }
         }
+
         // create and schedule system tasks
         createSystemTasks();
-        jobDatabase.getTasks().forEach(task -> {
+        jobDatabase.getTasks().forEach(task ->
+
+        {
             scheduleTask(task);
         });
         keys = quartz.getJobKeys(null);
-        for (JobKey key : keys) {
-            logger.info("Task: " + key + " is scheduled.");
+        if (logger.isDebugEnabled()) {
+            for (JobKey key : keys) {
+                logger.debug("Task: " + key + " is scheduled.");
+            }
         }
     }
 
     public void scheduleTask(TaskDefinition definition) {
         if (!definition.enabled) {
-            logger.info("Task: " + definition.getJobName() + " is disabled.");
+            if(logger.isDebugEnabled()) {
+                logger.debug("Task: " + definition.getJobName() + " is disabled.");
+            }
             return;
         }
         int definitionType = definition.type;
@@ -135,13 +144,15 @@ public class TaskRunner implements ForScheduler {
     public TaskDefinition getTask(long taskId, User user) {
         try {
             TaskDefinition task = jobDatabase.getTask(taskId);
-            logger.info("Task: " + task.id + " " + task.userId + " user id/type: " + user.uid + "/" + user.type);
+            if(logger.isDebugEnabled()) {
+                logger.debug("Task: " + task.id + " " + task.userId + " user id/type: " + user.uid + "/" + user.type);
+            }   
             boolean access = false;
-            if(user.type==User.OWNER || (task.userId!=null && task.userId.equals(user.uid))){
-                access=true;
+            if (user.type == User.OWNER || (task.userId != null && task.userId.equals(user.uid))) {
+                access = true;
             }
-            if(task.organization!=null && task.organization.intValue()==user.organization.intValue()){
-                access=true;
+            if (task.organization != null && task.organization.intValue() == user.organization.intValue()) {
+                access = true;
             }
             if (!access) {
                 return null;
@@ -160,11 +171,13 @@ public class TaskRunner implements ForScheduler {
     @Override
     public List<TaskDefinition> getTasks(User user, Integer offset, Integer limit) {
         Integer organization = null;
-        if (user.organization != null && user.organization.intValue() != DEFAULT_ORGANIZATION_ID) {
-            organization = user.organization.intValue();
-        }
         try {
-            return jobDatabase.getUserTasks(user.uid, organization);
+            if (user.type == User.OWNER) {
+                return jobDatabase.getTasks();
+            } else if (user.organization != null && user.organization.intValue() != DEFAULT_ORGANIZATION_ID) {
+                organization = user.organization.intValue();
+                return jobDatabase.getUserTasks(user.uid, organization);
+            }
         } catch (TaskDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -174,9 +187,11 @@ public class TaskRunner implements ForScheduler {
 
     @Override
     public TaskDefinition createTask(TaskDefinition task, User user) {
-        if(user.type!=User.OWNER){
+        if (user.type != User.OWNER) {
             // only system owner can modify task
-            logger.info("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+            if (logger.isDebugEnabled()) {
+                logger.debug("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+            }
             return null;
         }
         if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
@@ -185,14 +200,19 @@ public class TaskRunner implements ForScheduler {
         }
         try {
             task.userId = user.uid;
-            logger.info(
-                    "Creating task: " + task.description + " user id/type: " + user.uid + "/" + user.type + " task id: "
-                            + task.id);
+            if (logger.isDebugEnabled()) {
+                logger.debug(
+                        "Creating task: " + task.description + " user id/type: " + user.uid + "/" + user.type
+                                + " task id: "
+                                + task.id);
+            }
             task.id = null;
             task.id = jobDatabase.addTask(task);
             scheduleTask(task);
             return task;
-        } catch (TaskDatabaseException e) {
+        } catch (
+
+        TaskDatabaseException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -203,15 +223,18 @@ public class TaskRunner implements ForScheduler {
     public TaskDefinition updateTask(TaskDefinition task, User user) {
         try {
             TaskDefinition oldTask = jobDatabase.getTask(task.id);
-            if(user.type!=User.OWNER){
+            if (user.type != User.OWNER) {
                 // only system owner can modify task
-                logger.info("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+                }
                 return null;
             }
             if (task.userId != null && !(task.userId.equals(user.uid) || user.type == User.OWNER)) {
                 // only system owner or task owner can access task
-                logger.info("No authorization : " + task.id + " " + task.userId + " user id/type: " + user.uid + "/"
-                        + user.type);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("No authorization : " + task.id + " user id/type: " + user.uid + "/" + user.type);
+                }
                 return null;
             }
             if (task.organization != null) {
@@ -219,10 +242,14 @@ public class TaskRunner implements ForScheduler {
                 if (user.type != User.OWNER
                         || task.organization.intValue() != user.organization.intValue()
                         || user.type != User.OWNER) {
-                    logger.info("No authorization : " + task.id + ", organization=" + task.organization);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("No authorization : " + task.id + ", organization=" + task.organization);
+                    }
                     return null;
                 }
-                logger.info("No authorization : " + task.id + ", organization=" + task.organization);
+                if (logger.isDebugEnabled()) {
+                    logger.debug("No authorization : " + task.id + ", organization=" + task.organization);
+                }
                 return null;
             }
             jobDatabase.updateTask(task);
@@ -242,7 +269,9 @@ public class TaskRunner implements ForScheduler {
                     JobBuilder.newJob(getJobClass(definition.type))
                             .withIdentity(definition.getJobName(), definition.getJobGroup()).build().getKey());
             if (deleted) {
-                logger.info("Task: " + definition.getJobName() + " unscheduled.");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Task: " + definition.getJobName() + " unscheduled.");
+                }
             } else {
                 logger.error("Task: " + definition.getJobName() + " not unscheduled.");
             }

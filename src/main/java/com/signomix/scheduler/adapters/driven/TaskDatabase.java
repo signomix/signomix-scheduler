@@ -92,7 +92,7 @@ public class TaskDatabase implements ForAccessTasksDatabase {
     public List<TaskDefinition> getUserTasks(String userId, Integer organization) {
         ArrayList<TaskDefinition> definitions = new ArrayList<>();
         String query;
-
+        
         if (organization != null) {
             query = "SELECT * FROM task_definition WHERE userid = ? OR organization = ?";
         } else {
