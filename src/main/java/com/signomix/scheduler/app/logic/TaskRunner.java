@@ -13,7 +13,11 @@ import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 
+import com.signomix.common.Organization;
 import com.signomix.common.User;
+import com.signomix.common.db.IotDatabaseException;
+import com.signomix.common.db.OrganizationDaoIface;
+import com.signomix.common.tsdb.OrganizationDao;
 import com.signomix.scheduler.adapters.driven.TaskDatabase;
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.app.ports.driven.TaskDatabaseException;
@@ -41,6 +45,7 @@ public class TaskRunner implements ForScheduler {
     AgroalDataSource oltpDs;
 
     ForAccessTasksDatabase jobDatabase;
+    OrganizationDaoIface organizationDao;
 
     private static final Long DEFAULT_ORGANIZATION_ID = 1L;
 
@@ -61,6 +66,8 @@ public class TaskRunner implements ForScheduler {
                 logger.error("Error deleting task: " + key);
             }
         }
+        organizationDao = new OrganizationDao();
+        organizationDao.setDatasource(oltpDs);
 
         // create and schedule system tasks
         createSystemTasks();
@@ -187,6 +194,24 @@ public class TaskRunner implements ForScheduler {
 
     @Override
     public TaskDefinition createTask(TaskDefinition task, User user) {
+        Organization org=null;
+        try {
+            org = organizationDao.getOrganization(user.organization);
+        } catch (IotDatabaseException e) {
+            logger.warn("Error getting organization: " + user.organization);
+        }
+        if (org == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("No organization found for user: " + user.uid);
+            }
+            return null;
+        }
+        if (org.locked) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Organization is locked: " + org.name);
+            }
+            return null;
+        }
         if (user.type != User.OWNER) {
             // only system owner can modify task
             if (logger.isDebugEnabled()) {
@@ -221,6 +246,24 @@ public class TaskRunner implements ForScheduler {
 
     @Override
     public TaskDefinition updateTask(TaskDefinition task, User user) {
+        Organization org=null;
+        try {
+            org = organizationDao.getOrganization(user.organization);
+        } catch (IotDatabaseException e) {
+            logger.warn("Error getting organization: " + user.organization);
+        }
+        if (org == null) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("No organization found for user: " + user.uid);
+            }
+            return null;
+        }
+        if (org.locked) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Organization is locked: " + org.name);
+            }
+            return null;
+        }
         try {
             TaskDefinition oldTask = jobDatabase.getTask(task.id);
             if (user.type != User.OWNER) {
