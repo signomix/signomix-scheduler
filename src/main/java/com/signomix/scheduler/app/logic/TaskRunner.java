@@ -283,17 +283,12 @@ public class TaskRunner implements ForScheduler {
             if (task.organization != null) {
                 // only system owner or organization admin can modify task
                 if (user.type != User.OWNER
-                        || task.organization.intValue() != user.organization.intValue()
-                        || user.type != User.OWNER) {
+                        && task.organization.intValue() != user.organization.intValue()) {
                     if (logger.isDebugEnabled()) {
                         logger.debug("No authorization : " + task.id + ", organization=" + task.organization);
                     }
                     return null;
                 }
-                if (logger.isDebugEnabled()) {
-                    logger.debug("No authorization : " + task.id + ", organization=" + task.organization);
-                }
-                return null;
             }
             jobDatabase.updateTask(task);
             unscheduleTask(oldTask);
