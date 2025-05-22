@@ -7,7 +7,9 @@ import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.dto.TaskDefinition;
 
 import io.agroal.api.AgroalDataSource;
+import jakarta.enterprise.context.Dependent;
 
+@Dependent
 public class DummyTaskDatabase implements ForAccessTasksDatabase {
 
     // There will be 2 groupsof tasks:
@@ -36,6 +38,11 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     public void createDatabase() {
         tasks= new HashMap<>();
         // Quarkus cron format: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html
+    }
+
+    @Override
+    public void backupDb() {
+        // No backup needed for dummy database
     }
 
     @Override

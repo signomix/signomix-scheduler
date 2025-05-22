@@ -1,6 +1,8 @@
 package com.signomix.scheduler.adapters.driven;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +11,9 @@ import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.dto.TaskDefinition;
 
 import io.agroal.api.AgroalDataSource;
+import jakarta.enterprise.context.Dependent;
 
+@Dependent
 public class TaskDatabase implements ForAccessTasksDatabase {
 
     private AgroalDataSource datasource;
@@ -56,6 +60,19 @@ public class TaskDatabase implements ForAccessTasksDatabase {
             statement.execute(query2);
         } catch (Exception e) {
             throw new RuntimeException("Error creating table task_parameter", e);
+        }
+    }
+
+    @Override
+    public void backupDb() {
+        String query = "COPY task_definition to '/var/lib/postgresql/data/export/task_definition.csv' DELIMITER ';' CSV HEADER;"
+                + "COPY task_parameter to '/var/lib/postgresql/data/export/task_parameter.csv' DELIMITER ';' CSV HEADER;";
+        try (Connection conn = datasource.getConnection(); PreparedStatement pstmt = conn.prepareStatement(query);) {
+            pstmt.execute();
+        } catch (SQLException e) {
+            throw new RuntimeException("Backup exception", e);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

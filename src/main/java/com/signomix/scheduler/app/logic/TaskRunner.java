@@ -53,7 +53,7 @@ public class TaskRunner implements ForScheduler {
         jobDatabase = new TaskDatabase();
         logger.info("The application is starting...");
         jobDatabase.setDataSource(oltpDs);
-        jobDatabase.createDatabase();
+        //jobDatabase.createDatabase(); // database tables are created by signomix-ta-core microservice
         // stop all running tasks if any
         Set<JobKey> keys = quartz.getJobKeys(null);
         for (JobKey key : keys) {

@@ -2,6 +2,7 @@ package com.signomix.scheduler.app.ports.driven;
 
 import java.util.List;
 
+import com.signomix.common.db.IotDatabaseException;
 import com.signomix.scheduler.dto.TaskDefinition;
 
 import io.agroal.api.AgroalDataSource;
@@ -20,6 +21,8 @@ public interface ForAccessTasksDatabase {
      * This method is responsible for initializing and setting up the database.
      */
     public void createDatabase() throws TaskDatabaseException;
+    public void backupDb() throws TaskDatabaseException;
+
     /**
      * Retrieves a list of task definitions from the database.
      *
