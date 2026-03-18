@@ -15,7 +15,7 @@ public class EventJob extends Job implements  org.quartz.Job {
     @Override
     public void execute(JobExecutionContext context) throws JobExecutionException {
         Long id = (Long) context.getMergedJobDataMap().get("id");
-        checkAndReschedule(id);
+        reschedule(context.getMergedJobDataMap());
         String channel = (String) context.getMergedJobDataMap().get("channel");
         if(channel == null || channel.isEmpty()){
             logger.error("No channel defined for event job "+id);

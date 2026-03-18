@@ -319,6 +319,19 @@ public class TaskRunner implements ForScheduler {
         }
     }
 
+    void reschedule(JobDataMap dataMap){
+        // no need to add "disposable" parameter because Cron definition supports year field
+        /*
+        Boolean disposable = Boolean.valueOf((String)dataMap.get("disposable"));
+            if(!disposable){
+                Long id = (Long) dataMap.get("id");
+                unscheduleTask(jobDatabase.getTask(id));
+            }
+        } catch (TaskDatabaseException e) {
+            e.printStackTrace();
+        } */
+    }
+
     private Class getJobClass(int type) {
         switch (type) {
             case TaskDefinition.EVENT:

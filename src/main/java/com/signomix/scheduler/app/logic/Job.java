@@ -2,6 +2,7 @@ package com.signomix.scheduler.app.logic;
 
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.quartz.JobDataMap;
 
 import jakarta.inject.Inject;
 
@@ -20,22 +21,19 @@ public class Job {
 
     @Channel("email")
     Emitter<String> emailEmitter;
-    
 
-    
-    protected void checkAndReschedule(long taskDefinitionId) {
-        //TODO: implement task rescheduling
-        // 1. get task definition from database
-        // 2. if task definition is not found or not enabled remove it from scheduler
-        // 3. if task definition is found and enabled, check modification date and reschedule if updated
+    @Inject
+    TaskRunner taskRunner;
+
+    protected void reschedule(JobDataMap dataMap) {
+        taskRunner.reschedule(dataMap);
     }
 
     protected void sendEmail(String email, String subject, String content, String attachmentFileName) {
-        String message =
-        email + "\n" +
-        subject + "\n" +
-        attachmentFileName + "\n" +
-        content;
+        String message = email + "\n" +
+                subject + "\n" +
+                attachmentFileName + "\n" +
+                content;
 
         publish("email", message);
     }
