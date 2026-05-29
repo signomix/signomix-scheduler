@@ -1,13 +1,11 @@
 package com.signomix.scheduler.adapters.driven;
 
-import java.util.HashMap;
-import java.util.List;
-
 import com.signomix.scheduler.app.ports.driven.ForAccessTasksDatabase;
 import com.signomix.scheduler.dto.TaskDefinition;
-
 import io.agroal.api.AgroalDataSource;
 import jakarta.enterprise.context.Dependent;
+import java.util.HashMap;
+import java.util.List;
 
 @Dependent
 public class DummyTaskDatabase implements ForAccessTasksDatabase {
@@ -16,11 +14,9 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     // - system tasks (see: signomix-ta-jobs)
     // - user tasks (user defined)
 
-    private HashMap<Long,TaskDefinition> tasks;
+    private HashMap<Long, TaskDefinition> tasks;
 
-    public DummyTaskDatabase() {
-                
-    }
+    public DummyTaskDatabase() {}
 
     @Override
     public List<TaskDefinition> getTasks() {
@@ -28,15 +24,24 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
-    public List<TaskDefinition> getUserTasks(String userId, Integer organization) {
-        return tasks.values().stream().filter(
-            t -> (userId==null||userId.isEmpty())?t.userId==null:t.userId.equals(userId)
-        ).toList();
+    public List<TaskDefinition> getUserTasks(
+        String userId,
+        Integer organization
+    ) {
+        return tasks
+            .values()
+            .stream()
+            .filter(t ->
+                (userId == null || userId.isEmpty())
+                    ? t.userId == null
+                    : t.userId.equals(userId)
+            )
+            .toList();
     }
 
     @Override
     public void createDatabase() {
-        tasks= new HashMap<>();
+        tasks = new HashMap<>();
         // Quarkus cron format: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html
     }
 
@@ -46,9 +51,14 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
+    public void restoreDb() {
+        // No restore needed for dummy database
+    }
+
+    @Override
     public long addTask(TaskDefinition task) {
-        if(task.id==null){
-            task.id=System.currentTimeMillis();
+        if (task.id == null) {
+            task.id = System.currentTimeMillis();
         }
         tasks.put(task.id, task);
         return task.id;
@@ -70,13 +80,10 @@ public class DummyTaskDatabase implements ForAccessTasksDatabase {
     }
 
     @Override
-    public void setDataSource(AgroalDataSource dataSource) {
-    }
+    public void setDataSource(AgroalDataSource dataSource) {}
 
     @Override
     public int getTaskCount() {
         return tasks.size();
     }
-    
 }
-
